@@ -461,17 +461,6 @@ export async function startPairingServer(handleMessage) {
                 return fs.createReadStream(LOCAL_SOUND).pipe(res);
             }
 
-            if (req.method === 'GET' && url.pathname === '/zonic') {
-                try {
-                    const html = fs.readFileSync(new URL('./zonic.html', import.meta.url), 'utf8');
-                    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' });
-                    return res.end(html);
-                } catch {
-                    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-                    return res.end('Game not found');
-                }
-            }
-
             if (req.method === 'GET' && url.pathname === '/health') {
                 res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
                 return res.end('ok');

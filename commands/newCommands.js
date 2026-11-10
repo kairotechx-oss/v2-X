@@ -1,5 +1,6 @@
 import configManager from '../utils/manageConfigs.js';
-import { BOT_NAME, OWNER_NAME, OWNER_NUM } from '../config.js';
+import { BOT_NAME, OWNER_NAME, OWNER_NUM, BOT_VERSION } from '../config.js';
+import { bold, COMMAND_COUNT } from '../utils/commandList.js';
 
 const startedAt = Date.now();
 
@@ -16,7 +17,7 @@ function text(message, value) {
 export async function alive(message, client) {
   const uptime = formatDuration(process.uptime() * 1000);
   await client.sendMessage(jidOf(message), {
-    text: `╭━━━〔 ⚡ ${BOT_NAME} 〕━━━╮\n┃ ✅ STATUS: ONLINE\n┃ ⏱️ UPTIME: ${uptime}\n┃ 🕷 VERSION: 1.0.0\n┃ 👤 DEV: ${OWNER_NAME}\n╰━━━━━━━━━━━━━━━━━━━━╯`
+    text: `╭━━━〔 ${bold(BOT_NAME)} 〕╾━━━⟡\n┃✧ ${bold('STATUS')} : ${bold('ONLINE')}\n┃✧ ${bold('UPTIME')} : ${bold(uptime)}\n┃✧ ${bold('VERSION')} : ${bold(BOT_VERSION)}\n┃✧ ${bold('COMMANDS')} : ${bold(COMMAND_COUNT)}\n┃✧ ${bold('DEV')} : ${bold(String(OWNER_NAME).toUpperCase())}\n╰━━━━━━━━━━━━━━━━━━━𖤓`
   }, { quoted: message });
 }
 
@@ -65,7 +66,7 @@ export async function botinfo(message, client) {
   const number = client.user?.id?.split(':')[0] || OWNER_NUM;
   const cfg = configManager.config?.users?.[number] || {};
   await client.sendMessage(remote, {
-    text: `╭━━〔 🤖 BOT INFO 〕━━╮\n┃ Name: ${BOT_NAME}\n┃ Version: 1.0.0\n┃ Developer: ${OWNER_NAME}\n┃ Prefix: ${cfg.prefix || '.'}\n┃ Mode: Multi-device\n┃ Node: ${process.version}\n╰━━━━━━━━━━━━━━━━━━╯`
+    text: `╭━━━〔 ${bold(BOT_NAME)} 〕╾━━━⟡\n┃✧ ${bold('VERSION')} : ${bold(BOT_VERSION)}\n┃✧ ${bold('COMMANDS')} : ${bold(COMMAND_COUNT)}\n┃✧ ${bold('DEVELOPER')} : ${bold(String(OWNER_NAME).toUpperCase())}\n┃✧ ${bold('PREFIX')} : ${cfg.prefix || '.'}\n┃✧ ${bold('MODE')} : ${bold('MULTI-DEVICE')}\n┃✧ ${bold('NODE')} : ${process.version}\n╰━━━━━━━━━━━━━━━━━━━𖤓`
   }, { quoted: message });
 }
 
@@ -95,7 +96,7 @@ export async function quote(message, client) {
 export async function help(message, client) {
   const remote = jidOf(message);
   await client.sendMessage(remote, {
-    text: `╭━━━〔 🚀 NEW COMMANDS 〕━━━╮\n┃ .alive      → Bot status\n┃ .runtime    → Process uptime\n┃ .jid        → Chat/sender IDs\n┃ .groupinfo  → Group statistics\n┃ .admins     → List group admins\n┃ .members    → List group members\n┃ .botinfo    → Bot configuration\n┃ .calc       → Safe calculator\n┃ .quote      → Quote a replied message\n┃ .help       → Quick command guide\n╰━━━━━━━━━━━━━━━━━━━━━━╯`
+    text: `╭━━━〔 ${bold('QUICK HELP')} 〕╾━━━⟡\n┃✧ ${bold('COMMANDS')} : ${bold(COMMAND_COUNT)}\n┃✧ ${bold('VERSION')} : ${bold(BOT_VERSION)}\n┃\n┃ .menu       → All commands\n┃ .alive      → Bot status\n┃ .runtime    → Process uptime\n┃ .jid        → Chat/sender IDs\n┃ .groupinfo  → Group statistics\n┃ .admins     → List group admins\n┃ .members    → List group members\n┃ .botinfo    → Bot information\n┃ .calc       → Safe calculator\n┃ .quote      → Quote a replied message\n╰━━━━━━━━━━━━━━━━━━━𖤓`
   }, { quoted: message });
 }
 

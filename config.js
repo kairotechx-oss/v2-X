@@ -5,6 +5,9 @@
 
 export const BOT_NAME = process.env.BOT_NAME || "KAIRO ZYNEX";
 
+// Bot version shown in .menu, .alive and .botinfo
+export const BOT_VERSION = process.env.BOT_VERSION || "1.1.0";
+
 export const OWNER_NAME = process.env.OWNER_NAME || "KAIRO DEV";
 
 // Numéro WhatsApp du owner, SANS "+" ni espaces (ex: 50912345678)

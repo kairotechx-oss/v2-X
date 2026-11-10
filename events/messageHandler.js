@@ -111,6 +111,10 @@ async function handleIncomingMessage(event, client) {
             await safeAuto('presence', () => presence(message, client, userConfig.online));
             await safeAuto('autoreact', () => reactions.auto(message, client, userConfig.autoreact, userConfig.emoji || '🧑‍💻'));
 
+            // ZONIC game: answers (1 / 2 / 3) of a run that is in progress
+            try { if (await zonic.answer(message, client)) continue; }
+            catch (err) { console.warn('[zonic]', err?.message || err); }
+
             await safeAuto('status-saver', () => extras.statusSaver(message, client));
 
             const body = rawText.trim();
@@ -178,7 +182,7 @@ async function handleIncomingMessage(event, client) {
                 case 'haiku': return await aiChat.claude(message, client, args.join(' '));
                 case 'waifu':
                 case 'mywaifu': return await waifu.waifu(message, client, args);
-                case 'zonic': return await zonic.zonic(message, client);
+                case 'zonic': return await zonic.zonic(message, client, args);
                 case 'antimedia':
                 case 'am': return await protection.antimedia(message, client, args, isOwner);
                 case 'antibot': return await protection.antibot(message, client, args, isOwner);

@@ -1,6 +1,6 @@
 {
   "name": "kairo-zynex",
-  "version": "5.5.0",
+  "version": "1.1.0",
   "description": "KAIRO ZYNEX multi-device WhatsApp bot with stable command routing, 10 new commands and upgraded pairing website.",
   "main": "index.js",
   "type": "module",
@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/Danscot/senku-xmd#readme",
   "dependencies": {
+    "@distube/ytdl-core": "latest",
     "@vreden/youtube_scraper": "latest",
     "@whiskeysockets/baileys": "^7.0.0-rc.14",
     "axios": "^1.7.9",

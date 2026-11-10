@@ -1,21 +1,19 @@
-// Channel auto-react: when a new post appears in the official channel, a random
-// group of connected sessions reacts right away, each with a different emoji.
-// Per post the size of the group is 34, 40 or 70 sessions (never more than 90),
-// or every online session if fewer than that are connected.
-// Users can opt out with ".chreact off".
+// Channel auto-react: when a new post appears in the official channel, EVERY connected
+// session reacts right away (100 sessions online = 100 reactions), each session once,
+// with varied emojis. Users can opt out with ".chreact off".
+// Optional Railway variable CHANNEL_REACT_MAX caps the number of reactions per post.
 import crypto from 'crypto';
 import configManager from '../utils/manageConfigs.js';
 import { listSessionNumbers } from '../utils/connector.js';
 
-const TARGETS = [34, 40, 70];
-const MAX_REACTIONS = 90;
+const MAX_REACTIONS = Number(process.env.CHANNEL_REACT_MAX) || 5000;
 
 const EMOJIS = [
     '❤️', '🔥', '👏', '😍', '💯', '🙏', '⚡', '😂', '🥰', '😎',
     '🤩', '💪', '🎉', '👍', '😮', '🤝', '💎', '🌟', '✨', '🚀',
     '😁', '🙌', '💙', '💚', '💜', '🧡', '💛', '🤍', '🖤', '😇',
     '🥳', '🤗', '😘', '👌', '🫶', '🏆', '🎯', '🌹', '🍀', '🦋',
-    '😻', '🫡', '💫', '🇭🇹', '🍾', '😆', '🤯', '👑', '🦁', '🧍🏽'
+    '😻', '🫡', '💫', '🌈', '🍾', '😆', '🤯', '👑', '🦁', '🌸'
 ];
 
 const seen = new Set();
@@ -37,8 +35,7 @@ export async function channelReact(message, client, enabled) {
     seen.add(dedupe);
     if (seen.size > 5000) seen.delete(seen.values().next().value);
 
-    // Same decision for every session of this post: how many react (34 / 40 / 70, max 90)
-    const target = Math.min(TARGETS[hash(serverId) % TARGETS.length], MAX_REACTIONS);
+    const target = MAX_REACTIONS;
 
     // Online sessions that did not opt out, ordered randomly but identically for this post
     const users = configManager.config?.users || {};

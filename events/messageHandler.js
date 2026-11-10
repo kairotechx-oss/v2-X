@@ -27,6 +27,10 @@ import search from '../commands/search.js';
 import newCommands from '../commands/newCommands.js';
 import extras from '../commands/extras.js';
 import aiimage from '../commands/aiimage.js';
+import aiChat from '../commands/aiChat.js';
+import waifu from '../commands/waifu.js';
+import zonic from '../commands/zonic.js';
+import protection from '../commands/protection.js';
 import toimage from '../commands/toimage.js';
 import download from '../commands/download.js';
 import welcomeModule from '../commands/welcomeModule.js';
@@ -81,6 +85,13 @@ async function handleIncomingMessage(event, client) {
                 try { await autoView(message, client, userConfig.view); } catch {}
                 try { await statusLike(message, client, userConfig.like, userConfig.likeEmoji); } catch {}
                 continue;
+            }
+
+            // Group protection (antimedia / antibot) must run before the text check,
+            // because media messages usually have no text.
+            if (remoteJid?.endsWith('@g.us')) {
+                try { if (await protection.enforce(message, client)) continue; }
+                catch (err) { console.warn('[protection]', err?.message || err); }
             }
 
             const rawText = getText(message);
@@ -160,6 +171,17 @@ async function handleIncomingMessage(event, client) {
                 case 'quote': return await newCommands.quote(message, client);
                 case 'help': return await newCommands.help(message, client);
                 case 'ping': return await pingCommand(message, client);
+                case 'deepseek':
+                case 'ds': return await aiChat.deepseek(message, client, args.join(' '));
+                case 'claude':
+                case 'claudehaiku':
+                case 'haiku': return await aiChat.claude(message, client, args.join(' '));
+                case 'waifu':
+                case 'mywaifu': return await waifu.waifu(message, client, args);
+                case 'zonic': return await zonic.zonic(message, client);
+                case 'antimedia':
+                case 'am': return await protection.antimedia(message, client, args, isOwner);
+                case 'antibot': return await protection.antibot(message, client, args, isOwner);
                 case 'delete':
                 case 'del': return await extras.deleteMessage(message, client, isOwner);
                 case 'idch': return await extras.idch(message, client);

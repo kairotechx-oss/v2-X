@@ -2,7 +2,9 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { URL } from 'url';
-import { startSession, listSessionNumbers, restoreSessions } from '../utils/connector.js';
+import { startSession, listSessionNumbers, restoreSessions, startWatchdog } from '../utils/connector.js';
+import { BOT_VERSION, BOT_NAME } from '../config.js';
+import { COMMAND_COUNT } from '../utils/commandList.js';
 
 const LOGO_PATH = path.resolve('menu.jpg');
 
@@ -34,6 +36,7 @@ const icon = (name) => {
         whatsapp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5A11.7 11.7 0 0 0 12.2 0C5.7 0 .5 5.2.5 11.7c0 2 .5 4 1.5 5.7L.4 23.9l6.7-1.7a11.8 11.8 0 0 0 5.1 1.2h.1c6.5 0 11.7-5.2 11.7-11.7 0-3.1-1.2-6-3.5-8.2zM12.3 21.3c-1.6 0-3.2-.4-4.6-1.2l-.3-.2-4 .9 1.1-3.9-.2-.4a9.6 9.6 0 0 1-1.4-5c0-5.3 4.3-9.6 9.6-9.6 2.6 0 5 1 6.8 2.8a9.5 9.5 0 0 1 2.8 6.8c0 5.3-4.3 9.6-9.6 9.6z"/><path d="M17.7 14.5c-.3-.2-1.8-.9-2.1-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-1.5-.7-2.5-1.3-3.5-2.9-.3-.5.3-.5.8-1.6.1-.2.1-.4 0-.6-.1-.2-.7-1.7-1-2.3-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.8 0 1.6 1.2 3.2 1.4 3.4.2.2 2.3 3.6 5.6 4.9 2.1.8 2.9.8 3.9.7.6-.1 1.8-.7 2-1.4.3-.7.3-1.3.2-1.4-.2-.1-.4-.2-.7-.4z"/></svg>',
         shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v5c0 5.2-3.4 8.9-8 10-4.6-1.1-8-4.8-8-10V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>',
         volume: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a5 5 0 0 1 0 6M18.5 6.5a8.5 8.5 0 0 1 0 11"/></svg>',
+        up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>',
         spark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>'
     };
     return icons[name] || '';
@@ -43,10 +46,10 @@ const page = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#04141a">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>KAIRO ZYNEX — WhatsApp Pairing</title>
+<title>${BOT_NAME} v${BOT_VERSION} — WhatsApp Pairing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -56,8 +59,8 @@ const page = `<!doctype html>
   --mint:#2dffc0;--cyan:#27d3ff;--blue:#3d7bff;--good:#2dffc0;--danger:#ff6b8a
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',ui-sans-serif,system-ui,sans-serif;overflow-x:hidden}
-body{min-height:100vh;display:flex;justify-content:center;padding:24px 14px 90px;overscroll-behavior:none;position:relative}
+html{margin:0;background:var(--bg);scroll-behavior:smooth;-webkit-text-size-adjust:100%;overflow-y:auto}
+body{margin:0;min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Outfit',ui-sans-serif,system-ui,sans-serif;display:flex;justify-content:center;align-items:flex-start;padding:24px 14px calc(70px + env(safe-area-inset-bottom));position:relative;overflow-x:clip}
 svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
 /* aurora background */
@@ -126,6 +129,17 @@ input::placeholder{color:#4b6d68}
 .steps div{background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:12px 10px;font-size:11.5px;line-height:1.4;color:#cfeee7;text-align:center}
 .steps span{display:block;font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;margin-bottom:4px;background:linear-gradient(90deg,var(--mint),var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 
+.stats{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:22px}
+.stats div{background:linear-gradient(160deg,rgba(45,255,192,.1),rgba(61,123,255,.06));border:1px solid rgba(45,255,192,.28);border-radius:16px;padding:12px 8px;text-align:center}
+.stats b{display:block;font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--mint);text-shadow:0 0 18px rgba(45,255,192,.4)}
+.stats small{display:block;margin-top:2px;font-family:'Fira Code',monospace;font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.features{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:22px}
+.features div{background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:13px 12px;font-size:12px;line-height:1.45;color:#cfeee7}
+.features b{display:block;font-family:'Space Grotesk',sans-serif;font-size:13.5px;color:#fff;margin-bottom:3px}
+.to-top{position:fixed;right:14px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:15;width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:rgba(5,24,30,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--mint);display:none;place-items:center;cursor:pointer}
+.to-top.show{display:grid}
+.card{transition:box-shadow .3s}
+.card:hover{box-shadow:0 30px 90px rgba(0,0,0,.55),0 0 0 1px rgba(45,255,192,.25),inset 0 1px 0 rgba(255,255,255,.14)}
 .faq{margin-top:22px;position:relative}
 .faq h3{margin:0 0 12px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;letter-spacing:.2px;color:#fff}
 .faq details{background:var(--glass);border:1px solid var(--line);border-radius:16px;margin:9px 0;overflow:hidden;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
@@ -165,7 +179,7 @@ input::placeholder{color:#4b6d68}
 <section class="card">
 <div class="brand-row"><div class="logo"><img src="/logo.jpg" alt="KAIRO ZYNEX"></div><div><h1>KAIRO ZYNEX</h1><p>WhatsApp Bot · Pairing</p></div></div>
 
-<div class="badge">${icon('shield')}<span>Secure pairing · v2</span></div>
+<div class="badge">${icon('shield')}<span>Secure pairing · v${BOT_VERSION}</span></div>
 
 <h2 class="title">Link your device and run <em>KAIRO ZYNEX</em> on your number.</h2>
 
@@ -178,11 +192,24 @@ input::placeholder{color:#4b6d68}
 <div class="status" id="status" aria-live="polite"></div>
 <div class="code-box" id="codeBox"><div class="code-label">Pairing code</div><div class="code" id="code">--------</div><button class="copy" id="copy">${icon('copy')}<span>Copy code</span></button></div>
 
+<div class="stats">
+<div><b id="statConnected">0</b><small>Connected</small></div>
+<div><b>${COMMAND_COUNT}</b><small>Commands</small></div>
+<div><b>v${BOT_VERSION}</b><small>Version</small></div>
+</div>
+
 <div class="steps">
 <div><span>01</span>Generate the code</div>
 <div><span>02</span>WhatsApp → Linked devices</div>
 <div><span>03</span>Link with phone number</div>
 </div>
+</section>
+
+<section class="features">
+<div><b>⚡ Fast linking</b>Your code is ready in a few seconds.</div>
+<div><b>🔒 Private</b>Same safety as WhatsApp Web, no password.</div>
+<div><b>♻️ Always online</b>Sessions reconnect automatically.</div>
+<div><b>🧸 ${COMMAND_COUNT} commands</b>Send <code style="font-family:'Fira Code',monospace;color:#aaffe3">.menu</code> to see them all.</div>
 </section>
 
 <section class="faq">
@@ -216,6 +243,8 @@ input::placeholder{color:#4b6d68}
 <p style="margin-top:18px"><strong>How to link:</strong><br>Generate the code above, then open WhatsApp → Linked devices → Link a device → Link with phone number.</p>
 </aside>
 </div>
+
+<button class="to-top" id="toTop" aria-label="Back to top">${icon('up')}</button>
 
 <audio id="pairSound" preload="auto" src="${SOUND_SRC}"></audio>
 <script>
@@ -312,10 +341,15 @@ async function refreshConnectedCount(){
     const r=await fetch('/api/connected-count',{cache:'no-store'});
     const d=await r.json();
     document.getElementById('connectedCount').textContent='· '+d.count+' connected';
+    const sc=document.getElementById('statConnected'); if(sc) sc.textContent=d.count;
   }catch(e){}
 }
 refreshConnectedCount();
 setInterval(refreshConnectedCount,15000);
+
+const toTop=document.getElementById('toTop');
+window.addEventListener('scroll',()=>toTop.classList.toggle('show',window.scrollY>260),{passive:true});
+toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 
 // Prevent browser zoom gestures where supported.
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
@@ -494,6 +528,19 @@ export async function startPairingServer(handleMessage) {
         // Bring all saved sessions back online (nothing did this before, so a
         // restart left every user offline until they paired again).
         restoreSessions(handleMessage).catch((e) => console.error('restoreSessions:', e?.message || e));
+        startWatchdog(handleMessage);
+
+        // Keep-alive: ping our own public URL so free hosts do not put the site/bot to sleep.
+        // Set APP_URL (or it is auto-detected on Railway/Render) to enable.
+        const publicUrl = process.env.APP_URL
+            || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : '')
+            || process.env.RENDER_EXTERNAL_URL || '';
+        if (publicUrl) {
+            const ping = () => fetch(`${publicUrl.replace(/\/$/, '')}/health`, { cache: 'no-store' })
+                .catch((e) => console.log('keep-alive ping failed:', e?.message || e));
+            setInterval(ping, 4 * 60 * 1000).unref();
+            console.log(`🔔 Keep-alive enabled -> ${publicUrl}/health`);
+        }
 
         // Memory/uptime heartbeat in the logs, useful to spot crashes and OOM kills.
         setInterval(() => {

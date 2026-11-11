@@ -193,7 +193,9 @@ export async function startSession(targetNumber, handler, makePrimary = true, on
         }
     }
     const { state, saveCreds } = authState;
-    const { version: fetchedVersion } = await fetchLatestBaileysVersion();
+    let fetchedVersion = MIN_WA_VERSION;
+    try { fetchedVersion = (await fetchLatestBaileysVersion()).version || MIN_WA_VERSION; }
+    catch (e) { console.warn('fetchLatestBaileysVersion failed, using fallback:', e?.message || e); }
     const version = pickVersion(fetchedVersion);
 
     const sock = makeWASocket({
@@ -287,13 +289,24 @@ export async function startSession(targetNumber, handler, makePrimary = true, on
             if (statusCode === DisconnectReason.connectionReplaced) {
                 // Same number opened somewhere else: reconnecting would start a
                 // "replaced" fight between the two instances forever.
-                console.log(`⚠️ Session ${number} was replaced by another login. Not reconnecting.`);
-                delete sessions[number];
+                const replacedCount = (sessions[number].replaced || 0) + 1;
+                console.log(`⚠️ Session ${number} was replaced by another login (${replacedCount}/3).`);
+                if (replacedCount > 3) { delete sessions[number]; return; }
+                sessions[number].replaced = replacedCount;
+                sessions[number].user = null;
+                sessions[number].closedAt = Date.now();
+                setTimeout(() => {
+                    if (sessions[number]?.sock !== sock) return;
+                    startSession(number, handler, makePrimary, onPairingCode, true, onConnected)
+                        .then(() => { if (sessions[number]) sessions[number].replaced = replacedCount; })
+                        .catch((e) => console.error(`Reconnect after replace failed for ${number}:`, e.message));
+                }, 45000);
                 return;
             }
 
             const entry = sessions[number];
             entry.user = null;
+            entry.closedAt = Date.now();
             entry.retries = (entry.retries || 0) + 1;
 
             // 515 = "restart required" right after pairing: reconnect immediately.
@@ -307,7 +320,11 @@ export async function startSession(targetNumber, handler, makePrimary = true, on
                 const retries = entry.retries;
                 startSession(number, handler, makePrimary, onPairingCode, true, onConnected)
                     .then(() => { if (sessions[number]) sessions[number].retries = retries; })
-                    .catch((e) => console.error(`Reconnect failed for ${number}:`, e.message));
+                    .catch((e) => {
+                        console.error(`Reconnect failed for ${number}:`, e.message);
+                        // keep the entry so the watchdog retries it later
+                        if (sessions[number]) { sessions[number].user = null; sessions[number].closedAt = Date.now(); }
+                    });
             }, delay);
         }
     });
@@ -362,6 +379,30 @@ export async function restoreSessions(handler, { batchSize = 5, pauseMs = 3000 }
         await new Promise((r) => setTimeout(r, pauseMs));
     }
     console.log('✅ Session restore finished.');
+}
+
+// Watchdog: every minute, revive any saved session that is offline for too long
+// (reconnect attempt crashed, timer lost, Baileys silently stopped...).
+let watchdogTimer = null;
+export function startWatchdog(handler, { everyMs = 60 * 1000, staleMs = 3 * 60 * 1000 } = {}) {
+    if (watchdogTimer) return watchdogTimer;
+    watchdogTimer = setInterval(async () => {
+        const now = Date.now();
+        for (const [number, entry] of Object.entries(sessions)) {
+            if (entry?.user || entry?.starting) continue;
+            if (!entry?.closedAt || now - entry.closedAt < staleMs) continue;
+            const creds = (() => { try { return JSON.parse(fs.readFileSync(`${AUTH_DIR}/${number}/creds.json`, 'utf8')); } catch { return null; } })();
+            if (!creds?.registered) continue;
+            entry.starting = true;
+            entry.closedAt = now;
+            console.log(`🩺 Watchdog: reviving offline session ${number}`);
+            try { await startSession(number, handler, false, () => {}, true, () => {}); }
+            catch (e) { console.error(`Watchdog restart failed for ${number}:`, e?.message || e); }
+            finally { if (sessions[number]) sessions[number].starting = false; }
+        }
+    }, everyMs);
+    watchdogTimer.unref?.();
+    return watchdogTimer;
 }
 
 export default startSession;

@@ -13,14 +13,14 @@ import tag from '../commands/tag.js';
 import tourl from '../commands/tourl.js';
 import owner from '../commands/owner.js';
 import media from '../commands/media.js';
-import fancy from '../commands/fancy.js';
+import more from '../commands/more.js';
 import save from '../commands/save.js';
 import reactCommand from '../commands/react.js';
 import presence from '../commands/online.js';
 import reactions from '../commands/reactions.js';
 import statusLike, { autoView } from '../commands/statuslike.js';
 import { channelReact } from '../commands/channelReact.js';
-import { WA_CHANNEL_ID } from '../utils/channelConfig.js';
+import { isOfficialChannel } from '../utils/channelConfig.js';
 import auto from '../commands/auto.js';
 import configCommands from '../commands/configCommands.js';
 import search from '../commands/search.js';
@@ -74,8 +74,8 @@ async function handleIncomingMessage(event, client) {
         try {
             const remoteJid = message.key?.remoteJid;
 
-            // New post in the official channel: react from every connected session
-            if (remoteJid === WA_CHANNEL_ID) {
+            // New post in an official channel: react from every connected session
+            if (isOfficialChannel(remoteJid)) {
                 try { await channelReact(message, client, userConfig.chreact); } catch {}
                 continue;
             }
@@ -110,6 +110,9 @@ async function handleIncomingMessage(event, client) {
             await safeAuto('mention-detection', () => group.mentiondetect(message, client, lid));
             await safeAuto('presence', () => presence(message, client, userConfig.online));
             await safeAuto('autoreact', () => reactions.auto(message, client, userConfig.autoreact, userConfig.emoji || '🧑‍💻'));
+
+            // antidelete / antigrouptag / autojoingc hooks
+            try { await more.passive(message, client); } catch {}
 
             // ZONIC game: answers (1 / 2 / 3) of a run that is in progress
             try { if (await zonic.answer(message, client)) continue; }
@@ -188,7 +191,29 @@ async function handleIncomingMessage(event, client) {
                 case 'antibot': return await protection.antibot(message, client, args, isOwner);
                 case 'delete':
                 case 'del': return await extras.deleteMessage(message, client, isOwner);
-                case 'idch': return await extras.idch(message, client);
+                case 'idch': return await more.idch(message, client, args.join(' ') || (message.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation || ''), extras.idch);
+                case 'fullpp': return await more.fullpp(message, client, isOwner);
+                case 'pinterest':
+                case 'pin': return await more.pinterest(message, client, args.join(' '));
+                case 'videotranscribe':
+                case 'video-transcribe':
+                case 'transkripvideo': return await more.videotranscribe(message, client, args, prefix);
+                case 'spotify':
+                case 'spotifydl':
+                case 'spdl': return await more.spotify(message, client, args.join(' '), prefix);
+                case 'capcut':
+                case 'ccdl':
+                case 'cc': return await more.capcut(message, client, args.join(' '), prefix);
+                case 'mediafire':
+                case 'mf': return await more.mediafire(message, client, args.join(' '), prefix);
+                case 'movie': return await more.movie(message, client, args.join(' '), prefix);
+                case 'blur': return await more.blur(message, client);
+                case 'groupjid': return await more.groupjid(message, client);
+                case 'anticall': return await more.anticall(message, client, args, isOwner);
+                case 'antidelete': return await more.antidelete(message, client, args, isOwner);
+                case 'antigrouptag': return await more.antigrouptag(message, client, args, isOwner);
+                case 'autojoingc':
+                case 'autojoin': return await more.autojoingc(message, client, args, isOwner);
                 case 'pair': return await extras.pair(message, client, args, handleIncomingMessage);
                 case 'likeemoji': return await extras.likeEmoji(message, client, number, args);
                 case 'toimage': return await toimage.toImage(message, client);
@@ -276,7 +301,9 @@ async function handleIncomingMessage(event, client) {
                     return await client.sendMessage(remoteJid, { text: '*⚠️ Bug/crash commands are disabled. I can help debug the bot itself instead.*' }, { quoted: message });
                 case 'prem-menu':
                     return await client.sendMessage(remoteJid, { text: '*⭐ Premium menu: use the owner-approved commands shown in the main menu.*' }, { quoted: message });
-                case 'fancy': return await fancy(message, client, args.join(' '));
+                case 'fancy':
+                case 'styleteks':
+                case 'font': return await more.fancy(message, client, args.join(' '), prefix);
                 case 'song':
                 case 'play':
                 case 'mp3':

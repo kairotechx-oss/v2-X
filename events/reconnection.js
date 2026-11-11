@@ -1,10 +1,11 @@
+import { attachExtraEvents } from '../commands/more.js';
 import { makeWASocket, useMultiFileAuthState, DisconnectReason} from '@whiskeysockets/baileys';
 
 import handleIncomingMessage from '../events/messageHandler.js';
 
 import configManager from '../utils/manageConfigs.js';
 
-import autoJoin from '../utils/autoJoin.js';
+import { autoJoinAll } from '../utils/autoJoin.js';
 
 import fs from 'fs';
 
@@ -138,7 +139,7 @@ async function startSession(targetNumber) {
 
             // AutoJoin runs only after the WhatsApp connection is fully open.
             try {
-                await autoJoin(sock);
+                await autoJoinAll(sock);
             } catch (err) {
                 console.error(`❌ AutoJoin hook failed for ${targetNumber}:`, err?.message || err);
             }
@@ -146,6 +147,7 @@ async function startSession(targetNumber) {
         }
     });
 
+    attachExtraEvents(sock);
     sock.ev.on('messages.upsert', async (msg) => handleIncomingMessage(msg, sock));
 
     console.log(`✅ Session established for ${targetNumber}`);

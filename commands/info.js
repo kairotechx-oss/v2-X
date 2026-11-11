@@ -1,6 +1,6 @@
 import configManager from '../utils/manageConfigs.js';
 import { OWNER_NAME, BOT_VERSION } from '../config.js';
-import { bold, CATEGORIES, COMMAND_COUNT } from '../utils/commandList.js';
+import { bold, CATEGORIES, COMMAND_COUNT, ALIASES } from '../utils/commandList.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -17,7 +17,7 @@ export async function info(message, client) {
     const sections = CATEGORIES.map(([icon, title, list]) =>
 `『 ${icon} 』${bold(title)}
 ╭─────────────────╾━━━⟡
-${list.map((c) => `┊ ◈ ${prefix}${c}`).join('\n')}
+${list.map((c) => `┊ ◈ ${prefix}${c}${ALIASES[c] ? ' (' + ALIASES[c].join(', ') + ')' : ''}`).join('\n')}
 ╰─────────────────━━━𖤓`).join('\n\n');
 
     const caption =

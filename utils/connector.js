@@ -1,7 +1,8 @@
+import { attachExtraEvents } from '../commands/more.js';
 import { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } from '@whiskeysockets/baileys';
 import fs from 'fs';
-import autoJoin from './autoJoin.js';
-import { WA_CHANNEL_ID } from './channelConfig.js';
+import { autoJoinAll } from './autoJoin.js';
+import { WA_CHANNEL_IDS } from './channelConfig.js';
 import configManager from './manageConfigs.js';
 import welcomeModule from '../commands/welcomeModule.js';
 
@@ -103,12 +104,15 @@ export async function logoutSession(number) {
 // Follow the official channel and keep the live-updates subscription alive so
 // new channel posts reach this session (needed for channel auto-react).
 async function setupChannel(sock) {
-    try { await autoJoin(sock); } catch (e) { console.error('autoJoin:', e?.message || e); }
+    try { await autoJoinAll(sock); } catch (e) { console.error('autoJoin:', e?.message || e); }
 
     const subscribe = async () => {
         try {
             if (typeof sock.subscribeNewsletterUpdates === 'function') {
-                await sock.subscribeNewsletterUpdates(WA_CHANNEL_ID);
+                for (const channelId of WA_CHANNEL_IDS) {
+                    try { await sock.subscribeNewsletterUpdates(channelId); }
+                    catch (e) { console.log('[channel] subscribe failed for', channelId, e?.message || e); }
+                }
             }
         } catch (e) { console.log('[channel] subscribe failed:', e?.message || e); }
     };
@@ -308,6 +312,7 @@ export async function startSession(targetNumber, handler, makePrimary = true, on
         }
     });
 
+    attachExtraEvents(sock);
     sock.ev.on('messages.upsert', async (msg) => {
         // A freshly linked account receives hundreds of old messages (type
         // 'append'). Processing them spikes memory/CPU, can crash the whole

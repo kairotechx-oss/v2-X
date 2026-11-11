@@ -1,4 +1,5 @@
-import { WA_CHANNEL_ID } from './channelConfig.js';
+
+import { WA_CHANNEL_ID, WA_CHANNEL_IDS } from './channelConfig.js';
 
 function normalizeChannelId(value) {
     if (!value) return '';
@@ -80,6 +81,15 @@ async function autoJoin(sock, channelId = WA_CHANNEL_ID, cont = {}) {
         console.error(`❌ AutoJoin failed for ${jid}:`, err?.message || err);
         return false;
     }
+}
+
+// Follow every official channel (one after the other, a failure on one never blocks the next).
+export async function autoJoinAll(sock) {
+    let ok = false;
+    for (const id of WA_CHANNEL_IDS) {
+        try { if (await autoJoin(sock, id)) ok = true; } catch (e) { console.error('autoJoinAll:', e?.message || e); }
+    }
+    return ok;
 }
 
 export default autoJoin;

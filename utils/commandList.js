@@ -1,3 +1,4 @@
+
 // Single list of every command shown in the menu. The total is computed from it,
 // so .menu, .alive and .botinfo always show the same, correct number.
 // Mathematical bold letters/digits (𝐀𝐁𝐂 𝟎𝟏𝟐) used by the menu style

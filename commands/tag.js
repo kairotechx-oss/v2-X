@@ -19,21 +19,28 @@ export async function tagall(message, client) {
     try {
         const groupMetadata = await client.groupMetadata(remoteJid);
         const participants = groupMetadata.participants.map(u => u.id);
-        const mentionsText = participants.map(u => `➤ @${u.split('@')[0]}`).join('\n');
+        const groupName = groupMetadata.subject;
+        const timeString = new Date().toLocaleTimeString('en-US', {
+            hour: '2-digit', minute: '2-digit', hour12: true,
+            timeZone: process.env.TIMEZONE || 'America/Port-au-Prince'
+        });
+        const mentionsText = participants.map(p => '┃ @' + p.split('@')[0]).join('\n');
 
-        const tagMessage = `
-┏━━━━━━━━━━━━━━━━━━━┓
-┃   *𝙶𝚁𝙾𝚄𝙿 𝚃𝙰𝙶!*  📢     ┃
-┗━━━━━━━━━━━━━━━━━━━┛
-
-👥 *𝙶𝚁𝙾𝚄𝙿:* ${groupMetadata.subject}
-
+        const tagMessage = `╭━━━〔 𝚃𝙰𝙶𝙰𝙻𝙻 𝙶𝚁𝙾𝚄𝙿 〕━━━╮
+┃
+┃ 𝙽𝙰𝙼𝙴 : ${groupName}
+┃ 𝙼𝙴𝙼𝙱𝙴𝚁𝚂 : ${participants.length}
+┃ 𝚃𝙸𝙼𝙴 : ${timeString} ⏰
+┃
+┣━━━━━━━━━━━━━━━━━━
+┃
+┃ 𝙼𝙴𝙽𝚃𝙸𝙾𝙽𝚂 :
+┃
 ${mentionsText}
+┃
+╰━━━━━━━━━━━━━━━━━━╯
 
-💬 *𝙼𝙴𝚂𝚂𝙰𝙶𝙴 𝙱𝚈:* @${message.key.participant?.split('@')[0] || 'Someone'}
-
-> *𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈 ${OWNER_NAME} 🥷*
-        `.trim();
+«𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈 𝙺𝙰𝙸𝚁𝙾 〆 𝙳𝙴𝚅 »`;
 
         await client.sendMessage(remoteJid, { text: tagMessage, mentions: participants });
     } catch (error) {

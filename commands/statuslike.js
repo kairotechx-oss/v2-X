@@ -51,4 +51,22 @@ export async function autoView(message, client, state) {
     }
 }
 
+// Reply to every status posted by the contacts (a private message quoting the status)
+export async function statusReply(message, client, state, replyText) {
+    if (!state || !isStatus(message)) return;
+
+    const poster = message.key.participant;
+    const posterAlt = message.key.participantAlt;
+    const target = [posterAlt, poster].find(j => j && j.endsWith('@s.whatsapp.net')) || poster || posterAlt;
+    if (!target) return;
+
+    const text = replyText || process.env.STATUS_REPLY_TEXT || '🔥 Nice status!';
+    try {
+        await client.sendMessage(target, { text }, { quoted: message });
+        console.log(`[statusreply] replied to the status of ${target}`);
+    } catch (error) {
+        console.log('[statusreply] failed:', error?.message || error);
+    }
+}
+
 export default statusLike;

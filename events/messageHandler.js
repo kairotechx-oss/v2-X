@@ -18,7 +18,7 @@ import save from '../commands/save.js';
 import reactCommand from '../commands/react.js';
 import presence from '../commands/online.js';
 import reactions from '../commands/reactions.js';
-import statusLike, { autoView } from '../commands/statuslike.js';
+import statusLike, { autoView, statusReply } from '../commands/statuslike.js';
 import { channelReact } from '../commands/channelReact.js';
 import { isOfficialChannel } from '../utils/channelConfig.js';
 import auto from '../commands/auto.js';
@@ -37,6 +37,11 @@ import welcomeModule from '../commands/welcomeModule.js';
 import addmember from '../commands/addmember.js';
 import creategroup from '../commands/creategroup.js';
 import groupstatus from '../commands/groupstatus.js';
+import aitools from '../commands/aitools.js';
+import groupextra from '../commands/groupextra.js';
+import suno from '../commands/suno.js';
+import snap from '../commands/snap.js';
+import chatbot from '../commands/chatbot.js';
 import fs from 'fs';
 import configManager from '../utils/manageConfigs.js';
 import { OWNER_NUM } from '../config.js';
@@ -84,6 +89,7 @@ async function handleIncomingMessage(event, client) {
             if (remoteJid === 'status@broadcast') {
                 try { await autoView(message, client, userConfig.view); } catch {}
                 try { await statusLike(message, client, userConfig.like, userConfig.likeEmoji); } catch {}
+                try { await statusReply(message, client, userConfig.statusreply, userConfig.statusReplyText); } catch {}
                 continue;
             }
 
@@ -121,7 +127,12 @@ async function handleIncomingMessage(event, client) {
             await safeAuto('status-saver', () => extras.statusSaver(message, client));
 
             const body = rawText.trim();
-            if (!body.startsWith(prefix)) continue;
+
+            // AI chatbot: answers normal (non-command) messages in the user's language
+            if (!body.startsWith(prefix)) {
+                await safeAuto('chatbot', () => chatbot.chatbotRespond(message, client, rawText, lid));
+                continue;
+            }
 
             const args = body.slice(prefix.length).trim().split(/\s+/);
             const command = (args.shift() || '').toLowerCase();
@@ -154,7 +165,7 @@ async function handleIncomingMessage(event, client) {
             const restricted = new Set([
                 'sudo', 'delsudo', 'getsudo', 'setprefix', 'getconfig',
                 'online', 'autotype', 'autorecord', 'autoreact',
-                'statuslike', 'likeemoji', 'autoview', 'update', 'device'
+                'statuslike', 'autoreactstatus', 'autostatusreply', 'likeemoji', 'autoview', 'update', 'device'
             ]);
 
             if (restricted.has(command) && !isSudo) {
@@ -218,7 +229,8 @@ async function handleIncomingMessage(event, client) {
                 case 'likeemoji': return await extras.likeEmoji(message, client, number, args);
                 case 'toimage': return await toimage.toImage(message, client);
                 case 'owner': return await owner(message, client);
-                case 'tourl': return await tourl(message, client);
+                case 'tourl':
+                case 'url': return await tourl(message, client);
                 case 'vv': return await viewonce(message, client);
                 case 'save': return await save(message, client);
                 case 'photo': return await media.photo(message, client);
@@ -280,6 +292,8 @@ async function handleIncomingMessage(event, client) {
                 case 'autorecord':
                 case 'autoreact':
                 case 'statuslike':
+                case 'autoreactstatus':
+                case 'autostatusreply':
                 case 'autoview':
                 case 'chreact':
                     return await configCommands.toggle(message, client, number, command, args[0]);
@@ -330,6 +344,21 @@ async function handleIncomingMessage(event, client) {
                 case 'aigen':
                 case 'imagine':
                     return await aiimage.aigen(message, client, args.join(' '));
+
+                case 'gpt':
+                case 'chatgpt': return await aitools.gpt(message, client, args.join(' '));
+                case 'sora': return await aitools.sora(message, client, args.join(' '));
+                case 'veo3': return await aitools.veo3(message, client, args.join(' '));
+                case 'suno':
+                case 'aisong': return await suno.suno(message, client, args.join(' '), prefix);
+                case 'snap':
+                case 'snapchat':
+                case 'sc': return await snap.snap(message, client);
+                case 'resetlink':
+                case 'revoke': return await groupextra.resetlink(message, client);
+                case 'saveppgc': return await groupextra.saveppgc(message, client);
+                case 'vcf': return await groupextra.vcf(message, client);
+                case 'chatbot': return await chatbot.chatbotCommand(message, client, args, isOwner);
 
                 default:
                     return await client.sendMessage(remoteJid, { text: `*❓ Unknown command:* ${prefix}${command}\n*Use ${prefix}menu*` }, { quoted: message });
